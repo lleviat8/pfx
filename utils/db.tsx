@@ -3,6 +3,7 @@ import React, { createContext, useRef, useEffect, useState, useContext } from 'r
 import firebase from './firebase'
 import 'firebase/firestore'
 import { useAuth } from './useAuth'
+import { resolve } from 'node:path'
 
 
 
@@ -59,3 +60,20 @@ export const ProvideAdmin:React.FC = ({ children }) => {
 export const useAdmin = () => {
   return useContext(adminContext);
 };
+
+
+export const getFXRates = async () => {
+  const fn = ():Promise<Record<string, any>[]> => new Promise((resolve, reject) =>{
+    firebase.firestore().collection("rates").get()
+    .then((querySnapshot) => {
+        const data: Record<string, any>[] = [];
+        querySnapshot.forEach((doc) => {
+            data.push({'id': doc.id, ...doc.data()})
+        });
+        resolve(data)
+    }).catch((error) => {
+        console.log("Error getting documents: ", error);
+    });
+  })
+  return await fn()
+}
