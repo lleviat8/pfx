@@ -41,6 +41,7 @@ import { useAdmin, getFXRates } from "../utils/db";
 import firebase from '../utils/firebase'
 import { Gateway } from '../components/paymentgateway'
 import { FXRate, FXRateContextProvider, useFXRate } from "../components/fxratescontext";
+import { useTxns, TxnRow } from "../components/usetxns";
 
 
 
@@ -149,6 +150,8 @@ export const CenteredTabs:React.FC = () => {
   const classes = useStyles();
   const [tabIdx, setTabIdx] = React.useState(0);
 
+  const txns = useTxns()
+
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setTabIdx(newValue);
   };
@@ -166,19 +169,20 @@ export const CenteredTabs:React.FC = () => {
         <Tab label="Exchange Rate" />
       </Tabs>
       <Box mt={3}>
-        { tabIdx == 0 ? <Txns /> : <Rates /> }
+        { tabIdx == 0 ? <Txns txns={txns} /> : <Rates /> }
       </Box>
     </Box>
   );
 }
 
 
-export const Txns = () => {
+export const Txns = ({ txns }: {txns: TxnRow[]}) => {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [pay, setPay] = useState(false)
   const [payResp, setPayResp] = useState<Record<string, any>>({})
   const [data, setData] = useState<Record<string, any>>({})
+
 
   const onClose = useCallback(() => setOpen(false), [setOpen])
 
@@ -206,23 +210,30 @@ export const Txns = () => {
       headerName: 'Amount Paid',
       type: 'number',
       width: 90,
+      align: 'right' as 'right',
     },
-    { field: 'currency', headerName: 'Currency', width: 90 },
+    {
+      field: 'currency',
+      headerName: 'Currency',
+      width: 90,
+      align: 'right' as 'right',
+    },
     {
       field: 'amount',
       headerName: 'Amount',
       type: 'number',
       width: 90,
+      align: 'right' as 'right',
     },
   ];
   
-  const rows = [
-    { id: 1, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-    { id: 2, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-    { id: 3, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-    { id: 4, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-    { id: 5, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-  ];
+  // const rows = [
+  //   { id: 1, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
+  //   { id: 2, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
+  //   { id: 3, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
+  //   { id: 4, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
+  //   { id: 5, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
+  // ];
 
   return (
     <Box>
@@ -242,13 +253,13 @@ export const Txns = () => {
           <TableHead>
             <TableRow>
               {columns.map((col, idx) => (
-                <TableCell key={idx}>{col.headerName}</TableCell>
+                <TableCell key={idx} align={col.align}>{col.headerName}</TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
+            {txns.map((row, idx) => (
+              <TableRow key={idx}>
                 <TableCell component="th" scope="row">
                   {row.date}
                 </TableCell>
@@ -270,7 +281,7 @@ export const Rates:React.FC = () => {
   const ratesArray: FXRate[] = useMemo(()=>{
     const ratesArr: FXRate[] = [];
     for (const currency in rates) {
-      ratesArray.push(rates[currency])
+      ratesArr.push(rates[currency])
     }
 
     return ratesArr;

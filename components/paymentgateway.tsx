@@ -53,7 +53,7 @@ export const Gateway: React.FC<GatewayProps> = ({data, onClose}) => {
       onClose: handleClose,
       callback: handleClose
     }
-    console.log('options: ', options)
+    // console.log('options: ', options)
     PaystackPop.setup(options).openIframe();
   }
  

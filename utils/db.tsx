@@ -77,3 +77,8 @@ export const getFXRates = async () => {
   })
   return await fn()
 }
+
+
+export const get_db = () => {
+  return firebase.firestore()
+}
