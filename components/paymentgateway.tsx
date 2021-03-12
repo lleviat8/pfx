@@ -37,7 +37,9 @@ export const Gateway: React.FC<GatewayProps> = ({data, onClose}) => {
 
     const options = {
       key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-      email: data.email,
+      email: data.userEmail,
+      firstname: data.firstname,
+      lastname: data.lastname,
       amount: data.amount * 100,
       channels: ['card'],
       metadata: {

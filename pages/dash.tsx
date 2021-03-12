@@ -31,6 +31,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import Select, { SelectProps } from '@material-ui/core/Select';
+import CircularProgress from "@material-ui/core/CircularProgress";
 
 import InputAdornment from '@material-ui/core/InputAdornment';
 
@@ -41,7 +42,8 @@ import { useAdmin, getFXRates } from "../utils/db";
 import firebase from '../utils/firebase'
 import { Gateway } from '../components/paymentgateway'
 import { FXRate, FXRateContextProvider, useFXRate } from "../components/fxratescontext";
-import { useTxns, TxnRow } from "../components/usetxns";
+import { useTxns, TxnRow, TxnColType } from "../components/usetxns";
+import { SnackAlert, SnackAlertProps } from "../components/snackalert";
 
 
 
@@ -62,7 +64,6 @@ interface TxnDialogProps {
 
 interface NewTxnFormProps {
   onSubmit(x: Record<string, any>): void;
-  // rates: Record<string, any>
 }
 
 
@@ -176,68 +177,88 @@ export const CenteredTabs:React.FC = () => {
 }
 
 
-export const Txns = ({ txns }: {txns: TxnRow[]}) => {
+export const Txns = ({ txns }: {txns?: TxnRow[]}) => {
   const { user } = useAuth()
+  const { isAdmin } = useAdmin()
   const [open, setOpen] = useState(false)
   const [pay, setPay] = useState(false)
   const [payResp, setPayResp] = useState<Record<string, any>>({})
   const [data, setData] = useState<Record<string, any>>({})
-
+  const [msg, setMsg] = useState<string>();
 
   const onClose = useCallback(() => setOpen(false), [setOpen])
 
   const onPayClosed = useCallback((data: Record<string, any> | undefined) => {
-    console.log('modal closed with data: ', data)
     setPay(false)
+    if (data) {
+      setMsg('Your transaction will appear on the dashboard after verification')
+    }
   }, [setPay, setPayResp])
 
   const onSubmit = useCallback((data: Record<string, any>) => {
     onClose()
-    data.userId = user?.uid
-    setData(data)
-    setPay(true)
+    if (user) {
+      const names: string[] = (user.displayName || '').split(' ')
+      data.userId = user.uid
+      data.userEmail = user.email
+      data.firstname = names.splice(0,1)[0]
+      data.lastname = names.join(' ')
+      setData(data)
+      setPay(true)
+    }
   }, [onClose, setData, setPay, user])
 
-  const columns = [
-    {
-      field: 'date',
-      headerName: 'Date',
-      type: 'date',
-      width: 120,
-    },
-    {
-      field: 'amountPaid',
-      headerName: 'Amount Paid',
-      type: 'number',
-      width: 90,
-      align: 'right' as 'right',
-    },
-    {
-      field: 'currency',
-      headerName: 'Currency',
-      width: 90,
-      align: 'right' as 'right',
-    },
-    {
-      field: 'amount',
-      headerName: 'Amount',
-      type: 'number',
-      width: 90,
-      align: 'right' as 'right',
-    },
-  ];
-  
-  // const rows = [
-  //   { id: 1, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-  //   { id: 2, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-  //   { id: 3, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-  //   { id: 4, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-  //   { id: 5, date:'2021-03-09', amountPaid: 100000.0, currency:'USD', amount: 1000},
-  // ];
+  const clearMsg: SnackAlertProps['onClose'] = (ev, reason) => {
+    if (reason !== 'clickaway') setMsg((void 0))
+  }
+
+  const columns = useMemo(()=>{
+    const cols: TxnColType[] = [
+      {
+        field: 'date',
+        headerName: 'Date',
+        type: 'date',
+        width: 120,
+      },
+      {
+        field: 'amountPaid',
+        headerName: 'Amount Paid',
+        type: 'number',
+        width: 90,
+        align: 'right' as 'right',
+      },
+      {
+        field: 'currency',
+        headerName: 'Currency',
+        width: 90,
+        align: 'right' as 'right',
+      },
+      {
+        field: 'amount',
+        headerName: 'Amount',
+        type: 'number',
+        width: 90,
+        align: 'right' as 'right',
+      }
+    ]
+    if (isAdmin) {
+      cols.push(
+        {
+          field: 'userDisplayName',
+          headerName: 'Paid By',
+        },
+        {
+          field: 'userEmail',
+          headerName: 'Email',
+        }
+      )
+    }
+    return cols;
+  }, [isAdmin]);
 
   return (
     <Box>
-      <Box justifyContent='flex-end' display='flex' m={1}>
+      <Box justifyContent='flex-end' display='flex' m={2}>
         <Button
           variant='outlined'
           color='primary'
@@ -248,29 +269,55 @@ export const Txns = ({ txns }: {txns: TxnRow[]}) => {
         { pay && <Gateway data={data} onClose={onPayClosed} /> }
         <TxnDialog {...{open, onClose, onSubmit}} />
       </Box>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              {columns.map((col, idx) => (
-                <TableCell key={idx} align={col.align}>{col.headerName}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {txns.map((row, idx) => (
-              <TableRow key={idx}>
-                <TableCell component="th" scope="row">
-                  {row.date}
-                </TableCell>
-                <TableCell align="right">{row.amountPaid}</TableCell>
-                <TableCell align="right">{row.currency}</TableCell>
-                <TableCell align="right">{row.amount}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {!txns ?
+        <Box p={2} textAlign='center'>
+          <CircularProgress size='3rem' />
+          <Typography color='textSecondary' component='div'>
+            <Box mt={1}>Fetching Transactions</Box>
+          </Typography>
+        </Box> : null
+      }
+      {(txns && txns.length) ?
+        <Box minWidth='520px'>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {columns.map((col, idx) => (
+                    <TableCell key={idx} align={col.align}>{col.headerName}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {txns && txns.map((row, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell component="th" scope="row">
+                      {row.date.replace('T', ' ').split('.')[0]}
+                    </TableCell>
+                    <TableCell align="right">{row.amountPaid}</TableCell>
+                    <TableCell align="right">{row.currency}</TableCell>
+                    <TableCell align="right">{row.amount}</TableCell>
+                    {isAdmin ?
+                      <React.Fragment>
+                        <TableCell>{row.userDisplayName}</TableCell>
+                        <TableCell>{row.userEmail}</TableCell>
+                      </React.Fragment> : null
+                    }
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box> : null
+      }
+      {(txns && !txns.length) ?
+        <Box p={3} textAlign='center'>
+          <Typography color='textSecondary' component='div'>
+            <Box mt={1}>No transaction found</Box>
+          </Typography>
+        </Box> : null
+      }
+      <SnackAlert msg={msg} onClose={clearMsg} />
     </Box>
   )
 }
